@@ -1,6 +1,7 @@
 from socket import *
 from scapy.all import *
 import struct
+team_name = "A&I"
 # server_name = "servername"
 # print(get_if_list())
 # print(get_if_addr("eth0"))
@@ -24,11 +25,33 @@ class Client:
         
     
     def activate_client(self):
+        print("Client started, listening for offer requests")
+        print(f'MY IP: {get_if_addr("eth1")}')
         self.client_socket.bind(("0.0.0.0", 13117))
         while True:
             data_rcv, addr = self.client_socket.recvfrom(1028)
-            data = struct.unpack('lbh',data_rcv)
-            print(f"received message: {data}")
+            try:
+                data = struct.unpack('lbh',data_rcv)
+                if hex(data[0]) == "0xfeedbeef" and hex(data[1]) == "0x2":
+                    print(f'Received offer from {addr[0]}, attempting to connect...')
+                    self.activate_client_tcp(addr[0], int(data[2]))
+                print(addr)
+                # print(f"received message: {data}")
+            except struct.error as e:
+                pass
+            # time.sleep(1)
+    
+    def activate_client_tcp(self, server_name, server_port):
+        print("enetered the shit function")
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((server_name, server_port))
+        client_socket.send(str(team_name + '\n').encode())
+        # input_sentence = input('input a sentence: ')
+
+        modified_setence = client_socket.recv(1024)
+        print(f'modified sentence{modified_setence}')
+        client_socket.close()
+
 
 
 def main():
