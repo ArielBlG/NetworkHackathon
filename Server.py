@@ -9,7 +9,7 @@ class Server:
     def __init__(self):
         self.server_socket_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.server_socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_port = 2057
+        self.server_port = 2110
         self.server_ip = get_if_addr("eth1")
         # self.selector = selectors.DefaultSelector()
 
@@ -42,21 +42,24 @@ class Server:
         self.server_socket_tcp.listen(1)
         
         while 1:
-            connection_socket, addr = self.server_socket_tcp.accept()
-            thread.start(self.new_client(connection_socket, addr))
-            # connection_socket.send("Please enter your team name")
-            rcv_message = connection_socket.recv(1024)
-            print(f'the team name is {rcv_message.decode("utf-8")}')
-            connection_socket.close()
+            t_end = time.time() + 10
+            while time.time() < t_end:
+                connection_socket, addr = self.server_socket_tcp.accept()
+                client_thread = Thread(target=self.new_client, args=(connection_socket, addr))
+                client_thread.start()
+                # connection_socket.send("Please enter your team name")
+                rcv_message = connection_socket.recv(1024)
+                print(f'the team name is {rcv_message.decode("utf-8")}')
+                connection_socket.close()
+            print("10 seconds passed")
 
     def new_client(self,clientsocket,addr):
-    while True:
-        msg = clientsocket.recv(1024)
-        #do some checks and if msg == someWeirdSignal: break:
-        print (addr, ' >> ', msg)
-        msg = input('SERVER >> ')
-        clientsocket.send(msg)
-    clientsocket.close()
+        while True:
+            msg = clientsocket.recv(1024)
+            #do some checks and if msg == someWeirdSignal: break:
+            print (addr, ' >> ', msg)
+            # clientsocket.send(msg.decode())
+        clientsocket.close()
 
 def main():
     server = Server()
