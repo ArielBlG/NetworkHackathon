@@ -1,7 +1,8 @@
 from socket import *
 from scapy.all import *
 import struct
-team_name = "A&I"
+import sys
+# team_name = "A&I"
 # server_name = "servername"
 # print(get_if_list())
 # print(get_if_addr("eth0"))
@@ -18,11 +19,11 @@ team_name = "A&I"
 # print('Received', repr(data))
 class Client:
 
-    def __init__(self):
+    def __init__(self, team_name):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        
+        self.team_name = team_name
     
     def activate_client(self):
         print("Client started, listening for offer requests")
@@ -31,32 +32,37 @@ class Client:
         while True:
             data_rcv, addr = self.client_socket.recvfrom(1028)
             try:
+                print(f'got from {addr}')
                 data = struct.unpack('lbh',data_rcv)
-                if hex(data[0]) == "0xfeedbeef" and hex(data[1]) == "0x2":
+                if hex(data[0]) == "0xfeedbeee" and hex(data[1]) == "0x2":
                     print(f'Received offer from {addr[0]}, attempting to connect...')
                     self.activate_client_tcp(addr[0], int(data[2]))
-                print(addr)
+
                 # print(f"received message: {data}")
             except struct.error as e:
                 pass
             # time.sleep(1)
     
     def activate_client_tcp(self, server_name, server_port):
-        print("enetered the shit function")
+        print(f"connected to server {server_name} on port {server_port}")
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((server_name, server_port))
-        client_socket.send(str(team_name + '\n').encode())
+        client_socket.send(str(self.team_name + '\n').encode())
         # input_sentence = input('input a sentence: ')
 
         modified_setence = client_socket.recv(1024)
         print(f'modified sentence{modified_setence}')
+        modified_setence = client_socket.recv(1024)
+        print(f'modified sentence{modified_setence}')
+
         client_socket.close()
 
 
 
-def main():
-    client = Client()
+def main(team_name):
+    client = Client(team_name)
     client.activate_client()
 
 if __name__ == "__main__":
-    main()
+    team_name = sys.argv[1]
+    main(team_name)
