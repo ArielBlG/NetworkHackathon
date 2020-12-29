@@ -6,17 +6,9 @@ from pynput import keyboard
 
 def isData():
     return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
-class myclass:
-    def func1(self, key):
-        print(key, 'pressed')
 
-    def init(self):
-        myfunc = lambda key: self.func1(key)
-        listener = keyboard.Listener(
-            on_press=myfunc)
-        listener.start()
 def main():
-    # old_settings = termios.tcgetattr(sys.stdin)
+
     # try:
     #     tty.setcbreak(sys.stdin.fileno())
     #
@@ -30,25 +22,24 @@ def main():
     #
     # finally:
     #     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-    # i = 0
-    # c= ""
-    # print("start typing")
-    # while c != '\x1b':
-    #     try:
-    #         # message = self.server_socket.recv(1024)
-    #         # modified_message = message.decode("utf-8")
-    #         tty.setcbreak(sys.stdin.fileno())
-    #         # print(i)
-    #         i += 1
-    #         old_settings = termios.tcgetattr(sys.stdin)
-    #         if isData():
-    #             c = sys.stdin.read(1)
-    #             print(c)
-    #             # self.server_socket.send(c.encode())
-    #     finally:
-    #         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-    f = myclass()
-    f.init()
+    old_settings = termios.tcgetattr(sys.stdin)
+    i = 0
+    c= ""
+    print("start typing")
+    while c != '\x1b':
+        try:
+            # message = self.server_socket.recv(1024)
+            # modified_message = message.decode("utf-8")
+            tty.setcbreak(sys.stdin.fileno())
+            # print(i)
+            i += 1
+            # old_settings = termios.tcgetattr(sys.stdin)
+            if isData():
+                c = sys.stdin.read(1)
+                print(f'key pressed:{c}')
+                # self.server_socket.send(c.encode())
+        finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
     while True:
         continue

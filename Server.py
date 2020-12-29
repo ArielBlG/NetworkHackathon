@@ -13,6 +13,7 @@ class Server:
 
     def __init__(self, flag=True):
         self.server_socket_udp = None
+        # self.server_socket_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.server_socket_tcp = None
         self.server_port = 2110
         self.server_ip = get_if_addr("eth1")
@@ -28,6 +29,7 @@ class Server:
         self.tcp_thread = None
         self.first_list = []
         self.second_list = []
+        self.score_dictionary = {"Group 1":0, "Group 2": 0}
         # self.selector = selectors.DefaultSelector()
 
         # self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,30 +49,31 @@ class Server:
             self.udp_thread.join()
             self.tcp_thread.join()
             self.initiate_game()
+            self.game_over()
         except Exception as e:
             print("exception")
             self.server_socket_tcp.close()
 
     def game_over(self):
         self.game_started = False
+        self.broadcast_flag = True
         self.start_game_msg = ""
 
     def activate_server_UDP(self):
         self.server_socket_udp.settimeout(10)
         message = struct.pack('Ibh', 0xfeedbeef, 0x2, self.server_port)
-        interfaces = socket.getaddrinfo(host=socket.gethostname(), port=13117, family=socket.AF_INET)
-        allips = [ip[-1][0] for ip in interfaces]
-        print(allips)
+        # interfaces = socket.getaddrinfo(host=socket.gethostname(), port=13117, family=socket.AF_INET)
+        # allips = [ip[-1][0] for ip in interfaces]
+        # print(allips)
         time_started = time.time()
         while True:
             if time.time() > time_started + 10:
                 print("10 second passed")
                 self.broadcast_flag = False
-                self.server_socket_udp.close()
+                # self.server_socket_udp.close()
                 return
                 # if ip.split('.')[1] != '1':
                 #     continue
-
             self.server_socket_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             self.server_socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             self.server_socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -78,7 +81,7 @@ class Server:
             # print(self.server_socket_udp.gethostbyname(self.server_socket_udp.getfqdn()))
             self.server_socket_udp.bind((self.server_ip, 50005))
             # print(f'sending on {dest_ip}')
-            self.server_socket_udp.sendto(message, ("255.255.255.255", 13117))
+            self.server_socket_udp.sendto(message, ("255.255.255.255", 13110))
             self.server_socket_udp.close()
             time.sleep(1)
 
@@ -156,19 +159,28 @@ class Server:
         time.sleep(0.5)
         client_socket.setblocking(0)
         time_started_game = time.time()
-        while time.time() < time_started_game + 100:
+        while time.time() < time_started_game + 10:
             try:
                 msg = client_socket.recv(1024)
-                print(msg)
-                self.game_participents_dict[client_name] += 1
+                # print(msg)
+                if client_name in self.first_list:
+                    self.score_dictionary["Group 1"] += 1
+                else:
+                    self.score_dictionary["Group 2"] += 1
             except Exception as ex:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable":
                     time.sleep(0)
                     continue
-        print(self.game_participents_dict[client_name])
-        print("game_ended")
+        # print("game_ended")
         client_socket.send("Game over!".encode())
-        # client_socket.close()
+        winner = max(self.score_dictionary.items(), key=operator.itemgetter(1))[0]
+        scnd_place = min(self.score_dictionary.items(), key=operator.itemgetter(1))[0]
+        winner_msg = str(winner) + " typed in " + str(self.score_dictionary[winner]) + " characters."
+        winner_msg += str(scnd_place) + " typed in " + str(self.score_dictionary[scnd_place]) + " characters."
+        winner_msg += '\n' + str(winner) + " wins!"
+        client_socket.send(winner_msg.encode())
+        time.sleep(3)
+        client_socket.close()
 
 
 def main():

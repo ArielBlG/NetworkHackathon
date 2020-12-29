@@ -7,6 +7,7 @@ import select
 import tty
 from pynput import keyboard
 
+
 # team_name = "A&I"
 # server_name = "servername"
 # print(get_if_list())
@@ -33,8 +34,6 @@ class Client:
         self.client_socket = None
         self.server_socket = None
         self.team_name = team_name
-
-
 
     def activate_client(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -67,7 +66,7 @@ class Client:
         start_game_msg = "Welcome to Keyboard Spamming Battle Royale."
         modified_sentence = ""
         self.server_socket.setblocking(0)
-        while start_game_msg not in modified_sentence:
+        while not modified_sentence:
             try:
                 sentence = self.server_socket.recv(2048)
                 modified_sentence = sentence.decode('utf-8')
@@ -85,7 +84,6 @@ class Client:
         self.server_socket.connect((server_name, server_port))
         self.server_socket.send(str(self.team_name + '\n').encode())
         self.wait_for_game_start()
-        print("jgioasjoijgoijfas")
         self.game_in_progress()
         # input_sentence = input('input a sentence: ')
         # self.server_socket.setblocking(0)
@@ -100,7 +98,8 @@ class Client:
         listener = keyboard.Listener(
             on_press=myfunc)
         listener.start()
-        while modified_message != "Game over!":
+        # while modified_message != "Game over!":
+        while not modified_message:
             try:
                 message = self.server_socket.recv(1024)
                 modified_message = message.decode("utf-8")
@@ -109,21 +108,26 @@ class Client:
                     time.sleep(0)
                     continue
                     # raise ex
+        self.server_socket.setblocking(1)
+        message = self.server_socket.recv(1024)
+        modified_message = message.decode("utf-8")
+        print(modified_message)
 
     def game_ended(self):
         print("game ended")
-        time.sleep(1)
+        # time.sleep(1)
         self.server_socket.close()
         self.client_socket.close()
 
 
 def main(team_name):
-    client = Client(team_name)
-    client.activate_client()
+    while True:
+        client = Client(team_name)
+        client.activate_client()
 
 
 if __name__ == "__main__":
-    # team_name = sys.argv[1]
-    # main(team_name)
+    team_name = sys.argv[1]
+    main(team_name)
 
-    main("AB")
+    # main("AB")
