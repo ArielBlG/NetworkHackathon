@@ -34,7 +34,7 @@ def main():
         datacoming, x, y = select.select([sys.stdin], [], [], 0)
         if datacoming:
             c = sys.stdin.read(1)
-            list_chars.append(c)
+            list_chars.append(c) # TODO: REPLACE WITH SERVER SEND
             # print(c)
     os.system("stty -raw echo")
     # while time.time() < star_time + 5:

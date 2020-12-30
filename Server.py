@@ -4,14 +4,17 @@ import time
 import struct
 import random
 
+
 class Statistics:
     def __init__(self):
         self.best_team = ""
         self.best_score = 0
-    def update(self,best_team, best_score):
+
+    def update(self, best_team, best_score):
         if best_score > self.best_score:
             self.best_score = best_score
-            self.best_team = best_team
+            self.best_team = str(best_team)
+
 
 class Colors:
     TITLE = '\x1b[1;32;44m'
@@ -23,7 +26,7 @@ class Colors:
 
 class Server:
 
-    def __init__(self,statistics, flag=True):
+    def __init__(self, statistics, flag=True):
         self.server_socket_udp = None
         self.server_socket_tcp = None
         self.server_port = 2110
@@ -87,8 +90,9 @@ class Server:
             self.server_socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             self.server_socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             self.server_socket_udp.bind(('', 50005))
+            self.server_socket_udp.sendto(message, ("", 13124))
             # self.server_socket_udp.bind((self.server_ip, 50005))
-            self.server_socket_udp.sendto(message, ("127.1.255.255", 13124))
+            # self.server_socket_udp.sendto(message, ("127.1.255.255", 13124))
             # self.server_socket_udp.sendto(message, ("127.99.255.255", 13124))
             self.server_socket_udp.close()
             time.sleep(1)
@@ -205,7 +209,7 @@ class Server:
         :return: None
         """
         winner = max(self.score_dictionary.items(), key=operator.itemgetter(1))[0]
-        self.statistics.update(winner,self.score_dictionary[winner])
+        self.statistics.update(self.get_winner_participants(str(winner)), self.score_dictionary[winner])
         looser = min(self.score_dictionary.items(), key=operator.itemgetter(1))[0]
         winner_msg = ""
         winner_msg += self.color_text(str(winner), str(self.score_dictionary[winner]))
@@ -216,6 +220,12 @@ class Server:
         winner_msg += self.print_winners(winner)
         winner_msg += self.print_high_scores()
         self.winner_message = winner_msg
+
+    def get_winner_participants(self, winner):
+        if winner == "Group 1":
+            return [str(player) for player in self.first_list]
+        else:
+            return [str(player) for player in self.second_list]
 
     def print_winner_team(self, winner):
         """
@@ -239,12 +249,12 @@ class Server:
         msg = ""
         if winner == "Group 1":
             for player in self.first_list:
-                r = random.randint(30, 37)
-                msg += '\t\t' + '\x1b[1;' + str(r) + ';41m' + str(player) + Colors.END_COLOR + '\n'
+                r = random.randint(41, 47)
+                msg += '\t\t' + '\x1b[1;' + str(r) + ';40m' + str(player) + Colors.END_COLOR + '\n'
         else:
             for player in self.second_list:
                 r = random.randint(30, 37)
-                msg += '\t\t' + '\x1b[1;' + str(r) + ';44m' + str(player) + Colors.END_COLOR + '\n'
+                msg += '\t\t' + '\x1b[1;' + str(r) + ';40m' + str(player) + Colors.END_COLOR + '\n'
         return msg
 
     def color_text(self, group_name, number_chars):
@@ -266,8 +276,8 @@ class Server:
         return group_name_msg + typed_in_msg + num_chars_msg + characters_msg + "\n"
 
     def print_high_scores(self):
-        return  Colors.GROUP_1_TITLE + "Best group ever is " + self.statistics.best_team +\
-                " with " + self.statistics.best_score +" points!" + Colors.END_COLOR + '\n'
+        return Colors.GROUP_1_TITLE + "Best group ever is " + self.statistics.best_team + \
+               " with " + str(self.statistics.best_score) + " points!" + Colors.END_COLOR + '\n'
 
     def reset_server(self):
         """
