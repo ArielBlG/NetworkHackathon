@@ -94,12 +94,17 @@ class Client:
 
     def game_in_progress(self):
         modified_message = ""
-        myfunc = lambda key: self.send_to_server(key)
-        listener = keyboard.Listener(
-            on_press=myfunc)
-        listener.start()
+        # myfunc = lambda key: self.send_to_server(key)
+        # listener = keyboard.Listener(
+        #     on_press=myfunc)
+        # listener.start()
         # while modified_message != "Game over!":
+        os.system("stty raw -echo")
         while not modified_message:
+            datacoming, _, _ = select.select([sys.stdin], [], [], 0)
+            if datacoming:
+                c = sys.stdin.read(1)
+                self.server_socket.send(c.encode())
             try:
                 message = self.server_socket.recv(1024)
                 modified_message = message.decode("utf-8")
@@ -108,6 +113,7 @@ class Client:
                     time.sleep(0)
                     continue
                     # raise ex
+        os.system("stty -raw echo")
         self.server_socket.setblocking(1)
         message = self.server_socket.recv(1024)
         modified_message = message.decode("utf-8")

@@ -1,7 +1,8 @@
+import os
 import sys
 import select
-import tty
-import termios
+import time
+# import termios
 from pynput import keyboard
 
 def isData():
@@ -22,27 +23,40 @@ def main():
     #
     # finally:
     #     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-    old_settings = termios.tcgetattr(sys.stdin)
+    # old_settings = termios.tcgetattr(sys.stdin)
     i = 0
     c= ""
     print("start typing")
-    while c != '\x1b':
-        try:
-            # message = self.server_socket.recv(1024)
-            # modified_message = message.decode("utf-8")
-            tty.setcbreak(sys.stdin.fileno())
-            # print(i)
-            i += 1
-            # old_settings = termios.tcgetattr(sys.stdin)
-            if isData():
-                c = sys.stdin.read(1)
-                print(f'key pressed:{c}')
-                # self.server_socket.send(c.encode())
-        finally:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-
-    while True:
-        continue
+    star_time = time.time()
+    list_chars = []
+    os.system("stty raw -echo")
+    while time.time() < star_time + 5:
+        datacoming, x, y = select.select([sys.stdin], [], [], 0)
+        if datacoming:
+            c = sys.stdin.read(1)
+            list_chars.append(c)
+            # print(c)
+    os.system("stty -raw echo")
+    # while time.time() < star_time + 5:
+    #     try:
+    #         # message = self.server_socket.recv(1024)
+    #         # modified_message = message.decode("utf-8")
+    #         tty.setcbreak(sys.stdin.fileno())
+    #         # print(i)
+    #         # old_settings = termios.tcgetattr(sys.stdin)
+    #
+    #         # if isData():
+    #         #     c = sys.stdin.read(1)
+    #         #     list_chars.append(c)
+    #         #     print(f'key pressed:{c}')
+    #         # if isData():
+    #
+    #             # self.server_socket.send(c.encode())
+    #     finally:
+    #
+    #         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+    print(list_chars)
+    print("ended")
 
 
 if __name__ == '__main__':

@@ -81,9 +81,9 @@ class Server:
             # print(self.server_socket_udp.gethostbyname(self.server_socket_udp.getfqdn()))
             self.server_socket_udp.bind((self.server_ip, 50005))
             # print(f'sending on {dest_ip}')
-            self.server_socket_udp.sendto(message, ("255.255.255.255", 13110))
+            self.server_socket_udp.sendto(message, ("255.255.255.255", 13117))
             self.server_socket_udp.close()
-            time.sleep(1)
+            # time.sleep(1)
 
     def activate_server_TCP(self):
         print(f'opened tcp on {self.server_ip} with port num {self.server_port}')
@@ -134,7 +134,7 @@ class Server:
         msg += "\nGroup 2:\n==\n"
         msg += "".join([str(group_name) for group_name in self.second_list])
         msg += "\nStart pressing keys on your keyboard as fast as you can!!"
-        time.sleep(2)
+        # time.sleep(2)
         client_socket.send(msg.encode())
         client_socket.send("startgame".encode())
         # while not self.game_started:
@@ -156,13 +156,13 @@ class Server:
     def game(self, client_name, client_socket):
         # client_socket.send(self.start_game_msg.encode())
         # client_socket.send("Start pressing keys on your keyboard as fast as you can!!".encode())
-        time.sleep(0.5)
+        # time.sleep(0.5)
         client_socket.setblocking(0)
         time_started_game = time.time()
         while time.time() < time_started_game + 10:
             try:
                 msg = client_socket.recv(1024)
-                # print(msg)
+                print(msg)
                 if client_name in self.first_list:
                     self.score_dictionary["Group 1"] += 1
                 else:
@@ -171,6 +171,8 @@ class Server:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable":
                     time.sleep(0)
                     continue
+                else:
+                    print(ex)
         # print("game_ended")
         client_socket.send("Game over!".encode())
         winner = max(self.score_dictionary.items(), key=operator.itemgetter(1))[0]
@@ -179,7 +181,7 @@ class Server:
         winner_msg += str(scnd_place) + " typed in " + str(self.score_dictionary[scnd_place]) + " characters."
         winner_msg += '\n' + str(winner) + " wins!"
         client_socket.send(winner_msg.encode())
-        time.sleep(3)
+        # time.sleep(3)
         client_socket.close()
 
 
