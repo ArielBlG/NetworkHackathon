@@ -3,10 +3,11 @@ from scapy.all import *
 import struct
 import sys
 import select
+import traceback
 
 
 class Client:
-    def _init_(self, name):
+    def __init__(self, name):
         """
         Constructor
         :param name: Client group name
@@ -27,7 +28,8 @@ class Client:
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         print("Client started, listening for offer requests")
         print(f'My IP: {get_if_addr("eth1")}')
-        self.client_socket.bind(("0.0.0.0", 13112))
+        # self.client_socket.bind(("0.0.0.0", 13117))
+        self.client_socket.bind(("", 13124))
         while True:
             data_rcv, addr = self.client_socket.recvfrom(1028)
             try:
@@ -59,6 +61,7 @@ class Client:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable":
                     time.sleep(0)
                     continue
+                time.sleep(0.2)
 
     def activate_client_tcp(self, server_name, server_port):
         """
@@ -74,8 +77,11 @@ class Client:
         self.wait_for_game_start()
         try:
             self.game_in_progress()
-        except Exception:
+        except Exception as e:
+            # traceback.print_exception(e)
             os.system("stty -raw echo")
+            traceback.print_exc()
+            print("activate_client_tcp")
 
         self.game_ended()
 
@@ -88,19 +94,24 @@ class Client:
         modified_message = ""
         os.system("stty raw -echo")
         while not modified_message:
+            try:
+                message = self.server_socket.recv(2048)
+                modified_message = message.decode("utf-8")
+                if modified_message:
+                    break
+            except Exception as ex:
+                # print("game_in_progress")
+                if str(ex) == "[Errno 35] Resource temporarily unavailable":
+                    time.sleep(0.01)
+                    # continue
+                time.sleep(0.01)
             incoming_data, _, _ = select.select([sys.stdin], [], [], 0)
             if incoming_data:
                 c = sys.stdin.read(1)
                 self.server_socket.send(c.encode())
-            try:
-                message = self.server_socket.recv(1024)
-                modified_message = message.decode("utf-8")
-            except Exception as ex:
-                if str(ex) == "[Errno 35] Resource temporarily unavailable":
-                    time.sleep(0)
-                    continue
         os.system("stty -raw echo")
-        self.server_socket.setblocking(True)
+        # self.server_socket.setblocking(True)
+        # print("aaaa")
         print(modified_message)
 
     def game_ended(self):
@@ -123,6 +134,7 @@ def main(name):
     while True:
         client = Client(name)
         client.activate_client()
+        time.sleep(3)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ class Colors:
 
 class Server:
 
-    def _init_(self, flag=True):
+    def __init__(self, flag=True):
         self.server_socket_udp = None
         self.server_socket_tcp = None
         self.server_port = 2110
@@ -53,9 +53,11 @@ class Server:
             self.tcp_thread.join()
             self.initiate_game()
             self.close_connections_with_clients()
+            time.sleep(0.5)
             self.reset_server()
         except Exception as e:
             print(e)
+            time.sleep(1)
             self.server_socket_tcp.close()
 
     def activate_server_udp(self):
@@ -76,7 +78,9 @@ class Server:
             self.server_socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             self.server_socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             self.server_socket_udp.bind(('', 50005))
-            self.server_socket_udp.sendto(message, ("<broadcast>", 13117))
+            # self.server_socket_udp.bind((self.server_ip, 50005))
+            self.server_socket_udp.sendto(message, ("127.1.255.255", 13124))
+            # self.server_socket_udp.sendto(message, ("127.99.255.255", 13124))
             self.server_socket_udp.close()
             time.sleep(1)
 
@@ -87,13 +91,15 @@ class Server:
         """
         print(f'opened tcp on {self.server_ip} with port num {self.server_port}')
         self.server_socket_tcp.bind(('', self.server_port))
+        # self.server_socket_tcp.bind((self.server_ip, self.server_port))
         self.server_socket_tcp.listen(1)
         self.server_socket_tcp.setblocking(False)
-
         while self.broadcast_flag:
             try:
                 connection_socket, addr = self.server_socket_tcp.accept()
+
                 msg = connection_socket.recv(1024)
+
                 print("the team connected is:", ' >> ', msg.decode("utf-8"))
                 client_name = msg.decode("utf-8")
                 self.clients_sockets.append(connection_socket)
@@ -101,8 +107,8 @@ class Server:
                 self.game_participants.append(client_name)
             except Exception as ex:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable":
-                    time.sleep(0)
                     continue
+                time.sleep(1)
 
     def initiate_game(self):
         """
@@ -170,16 +176,17 @@ class Server:
             try:
                 msg = client_socket.recv(1024)
                 if client_name in self.first_list:
-                    self.score_dictionary["Group 1"] += 1
+                    self.score_dictionary["Group 1"] += len(msg)
                 else:
-                    self.score_dictionary["Group 2"] += 1
+                    self.score_dictionary["Group 2"] += len(msg)
             except Exception as ex:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable" or \
                         "[Errno 11] Resource temporarily unavailable":
-                    time.sleep(0)
+                    time.sleep(0.5)
                     continue
                 else:
                     print(ex)
+                time.sleep(0.5)
 
         self.game_over_message()
 
@@ -274,6 +281,7 @@ def main():
     while True:
         server = Server()
         server.initiate_server()
+        time.sleep(3)
 
 
 if __name__ == "__main__":
