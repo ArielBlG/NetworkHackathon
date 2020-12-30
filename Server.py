@@ -4,6 +4,14 @@ import time
 import struct
 import random
 
+class Statistics:
+    def __init__(self):
+        self.best_team = ""
+        self.best_score = 0
+    def update(self,best_team, best_score):
+        if best_score > self.best_score:
+            self.best_score = best_score
+            self.best_team = best_team
 
 class Colors:
     TITLE = '\x1b[1;32;44m'
@@ -15,7 +23,7 @@ class Colors:
 
 class Server:
 
-    def __init__(self, flag=True):
+    def __init__(self,statistics, flag=True):
         self.server_socket_udp = None
         self.server_socket_tcp = None
         self.server_port = 2110
@@ -34,6 +42,7 @@ class Server:
         self.second_list = []
         self.score_dictionary = {"Group 1": 0, "Group 2": 0}
         self.winner_message = ""
+        self.statistics = statistics
 
     def initiate_server(self):
         """
@@ -196,6 +205,7 @@ class Server:
         :return: None
         """
         winner = max(self.score_dictionary.items(), key=operator.itemgetter(1))[0]
+        self.statistics.update(winner,self.score_dictionary[winner])
         looser = min(self.score_dictionary.items(), key=operator.itemgetter(1))[0]
         winner_msg = ""
         winner_msg += self.color_text(str(winner), str(self.score_dictionary[winner]))
@@ -204,6 +214,7 @@ class Server:
         winner_msg += '\t' + Colors.TITLE + "Congratulations to the winners:" + Colors.END_COLOR + '\n'
         winner_msg += '\t\t\t' + Colors.TITLE + "==" + Colors.END_COLOR + '\n'
         winner_msg += self.print_winners(winner)
+        winner_msg += self.print_high_scores()
         self.winner_message = winner_msg
 
     def print_winner_team(self, winner):
@@ -254,6 +265,10 @@ class Server:
             group_name_msg = Colors.GROUP_2_TITLE + str(group_name) + Colors.END_COLOR
         return group_name_msg + typed_in_msg + num_chars_msg + characters_msg + "\n"
 
+    def print_high_scores(self):
+        return  Colors.GROUP_1_TITLE + "Best group ever is " + self.statistics.best_team +\
+                " with " + self.statistics.best_score +" points!" + Colors.END_COLOR + '\n'
+
     def reset_server(self):
         """
         Resetting the game
@@ -278,8 +293,9 @@ def main():
     Main function, initialize server and starting games
     :return:
     """
+    statistics = Statistics()
     while True:
-        server = Server()
+        server = Server(statistics)
         server.initiate_server()
         time.sleep(3)
 
