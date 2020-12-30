@@ -2,46 +2,32 @@ from socket import *
 from scapy.all import *
 import struct
 import sys
-import termios
 import select
-import tty
-from pynput import keyboard
-
-
-# team_name = "A&I"
-# server_name = "servername"
-# print(get_if_list())
-# print(get_if_addr("eth0"))
-# print(get_if_addr("lo"))
-# server_port 
-# HOST = '127.0.0.1'  # The server's hostname or IP address
-# PORT = 65432        # The port used by the server
-
-# with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#     s.connect((HOST, PORT))
-#     s.sendall(b'Hello, world')
-#     data = s.recv(1024)
-
-# print('Received', repr(data))
-
-def isData():
-    return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
 
 
 class Client:
-
-    def __init__(self, team_name):
+    def _init_(self, name):
+        """
+        Constructor
+        :param name: Client group name
+        :return: None
+        """
+        self.team_name = name
         self.client_socket = None
         self.server_socket = None
-        self.team_name = team_name
 
     def activate_client(self):
+        """
+        Listening for offers from servers through broadcast.
+        Once an offer arrives, connect to it.
+        :return:
+        """
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         print("Client started, listening for offer requests")
-        print(f'MY IP: {get_if_addr("eth1")}')
-        self.client_socket.bind(("0.0.0.0", 13117))
+        print(f'My IP: {get_if_addr("eth1")}')
+        self.client_socket.bind(("0.0.0.0", 13112))
         while True:
             data_rcv, addr = self.client_socket.recvfrom(1028)
             try:
@@ -51,21 +37,18 @@ class Client:
                     print(f'Received offer from {addr[0]}, attempting to connect...')
                     self.activate_client_tcp(addr[0], int(data[2]))
                     return
-                # print(f"received message: {data}")
-            except struct.error as e:
+            except struct.error:
                 pass
-            except Exception as e:
-                print(e)
-            # time.sleep(1)
-
-    def send_to_server(self, key):
-        # print(f'key pressed: {key}')
-        self.server_socket.send(str(key).encode())
+            except Exception as err:
+                print(err)
 
     def wait_for_game_start(self):
-        start_game_msg = "Welcome to Keyboard Spamming Battle Royale."
+        """
+        Waiting for game to begin - Until message from Server arrives.
+        :return: None
+        """
         modified_sentence = ""
-        self.server_socket.setblocking(0)
+        self.server_socket.setblocking(False)
         while not modified_sentence:
             try:
                 sentence = self.server_socket.recv(2048)
@@ -78,31 +61,35 @@ class Client:
                     continue
 
     def activate_client_tcp(self, server_name, server_port):
+        """
+        Connecting to a server with TCP
+        :param server_name: Server to connect name
+        :param server_port: Server to connect port
+        :return: None
+        """
         print(f"connected to server {server_name} on port {server_port}")
-        # client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.connect((server_name, server_port))
-        self.server_socket.send(str(self.team_name + '\n').encode())
+        self.server_socket.send(str(self.team_name).encode())
         self.wait_for_game_start()
-        self.game_in_progress()
-        # input_sentence = input('input a sentence: ')
-        # self.server_socket.setblocking(0)
-
-        game_list = []
+        try:
+            self.game_in_progress()
+        except Exception:
+            os.system("stty -raw echo")
 
         self.game_ended()
 
     def game_in_progress(self):
+        """
+        Getting inputs from user and sends to Server while game is on.
+        Waiting for game to end.
+        :return: None
+        """
         modified_message = ""
-        # myfunc = lambda key: self.send_to_server(key)
-        # listener = keyboard.Listener(
-        #     on_press=myfunc)
-        # listener.start()
-        # while modified_message != "Game over!":
         os.system("stty raw -echo")
         while not modified_message:
-            datacoming, _, _ = select.select([sys.stdin], [], [], 0)
-            if datacoming:
+            incoming_data, _, _ = select.select([sys.stdin], [], [], 0)
+            if incoming_data:
                 c = sys.stdin.read(1)
                 self.server_socket.send(c.encode())
             try:
@@ -112,28 +99,32 @@ class Client:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable":
                     time.sleep(0)
                     continue
-                    # raise ex
         os.system("stty -raw echo")
-        self.server_socket.setblocking(1)
-        message = self.server_socket.recv(1024)
-        modified_message = message.decode("utf-8")
+        self.server_socket.setblocking(True)
         print(modified_message)
 
     def game_ended(self):
-        print("game ended")
-        # time.sleep(1)
+        """
+        Game over, closes the sockets.
+        :return: None
+        """
+        print("Game Ended")
+        time.sleep(1)
         self.server_socket.close()
         self.client_socket.close()
 
 
-def main(team_name):
+def main(name):
+    """
+    Main function, Initialize client consistently
+    :param name: Client group name
+    :return:
+    """
     while True:
-        client = Client(team_name)
+        client = Client(name)
         client.activate_client()
 
 
 if __name__ == "__main__":
-    team_name = sys.argv[1]
+    team_name = "Wet Assh Protocol"
     main(team_name)
-
-    # main("AB")
