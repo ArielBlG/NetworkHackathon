@@ -3,25 +3,8 @@ from scapy.all import *
 import time
 import struct
 import random
-
-
-class Statistics:
-    def __init__(self):
-        self.best_team = ""
-        self.best_score = 0
-
-    def update(self, best_team, best_score):
-        if best_score > self.best_score:
-            self.best_score = best_score
-            self.best_team = str(best_team)
-
-
-class Colors:
-    TITLE = '\x1b[1;32;44m'
-    GROUP_1_TITLE = '\x1b[1;31;40m'
-    GROUP_2_TITLE = '\x1b[1;34;40m'
-    NUM_CHARS = '\x1b[1;30;43m'
-    END_COLOR = '\x1b[0m'
+from Statistics import Statistics
+from Constants import *
 
 
 class Server:
@@ -29,7 +12,7 @@ class Server:
     def __init__(self, statistics, flag=True):
         self.server_socket_udp = None
         self.server_socket_tcp = None
-        self.server_port = 2110
+        self.server_port = SERVER_PORT
         self.server_ip = get_if_addr("eth1")
         self.broadcast_flag = flag
         self.game_participants = []
@@ -43,7 +26,7 @@ class Server:
         self.tcp_thread = None
         self.first_list = []
         self.second_list = []
-        self.score_dictionary = {"Group 1": 0, "Group 2": 0}
+        self.score_dictionary = {GROUP_NAME_1: 0, GROUP_NAME_2: 0}
         self.winner_message = ""
         self.statistics = statistics
 
@@ -53,7 +36,7 @@ class Server:
         :return: None
         """
         try:
-            print(f'Server started, listening on IP address {get_if_addr("eth1")}')
+            print(f'Server started, listening on IP address {self.server_ip}')
             self.server_socket_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             self.server_socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket_tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -77,23 +60,20 @@ class Server:
         Opens UDP socket to send messages to broadcast
         :return: None
         """
-        self.server_socket_udp.settimeout(10)
+        self.server_socket_udp.settimeout(SECONDS_WAITING_FOR_CLIENTS)
         message = struct.pack('Ibh', 0xfeedbeef, 0x2, self.server_port)
         time_started = time.time()
 
         while True:
-            if time.time() > time_started + 10:
-                print("10 second passed")
+            if time.time() > time_started + SECONDS_WAITING_FOR_CLIENTS:
+                print(SECONDS_WAITING_FOR_CLIENTS,"second passed")
                 self.broadcast_flag = False
                 return
             self.server_socket_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             self.server_socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             self.server_socket_udp.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             self.server_socket_udp.bind(('', 50005))
-            self.server_socket_udp.sendto(message, ("", 13124))
-            # self.server_socket_udp.bind((self.server_ip, 50005))
-            # self.server_socket_udp.sendto(message, ("127.1.255.255", 13124))
-            # self.server_socket_udp.sendto(message, ("127.99.255.255", 13124))
+            self.server_socket_udp.sendto(message, (BROADCAST_IP, BROADCAST_PORT))
             self.server_socket_udp.close()
             time.sleep(1)
 
@@ -111,10 +91,10 @@ class Server:
             try:
                 connection_socket, addr = self.server_socket_tcp.accept()
 
-                msg = connection_socket.recv(1024)
+                msg = connection_socket.recv(MESSAGE_SIZE)
 
-                print("the team connected is:", ' >> ', msg.decode("utf-8"))
-                client_name = msg.decode("utf-8")
+                print("the team connected is:", ' >> ', msg.decode(UNICODE))
+                client_name = msg.decode(UNICODE)
                 self.clients_sockets.append(connection_socket)
                 self.clients_sockets_dict[client_name] = connection_socket
                 self.game_participants.append(client_name)
@@ -189,9 +169,9 @@ class Server:
             try:
                 msg = client_socket.recv(1024)
                 if client_name in self.first_list:
-                    self.score_dictionary["Group 1"] += len(msg)
+                    self.score_dictionary[GROUP_NAME_1] += len(msg)
                 else:
-                    self.score_dictionary["Group 2"] += len(msg)
+                    self.score_dictionary[GROUP_NAME_2] += len(msg)
             except Exception as ex:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable" or \
                         "[Errno 11] Resource temporarily unavailable":
@@ -222,7 +202,12 @@ class Server:
         self.winner_message = winner_msg
 
     def get_winner_participants(self, winner):
-        if winner == "Group 1":
+        """
+        Getting all participants name of the winning group
+        :param winner: The winning group name
+        :return: List of participants names
+        """
+        if winner == GROUP_NAME_1:
             return [str(player) for player in self.first_list]
         else:
             return [str(player) for player in self.second_list]
@@ -234,7 +219,7 @@ class Server:
         :return: String of the winning team
         """
         winner_msg = ""
-        if winner == "Group 1":
+        if winner == GROUP_NAME_1:
             winner_msg += '\n\t\t' + Colors.GROUP_1_TITLE + str(winner) + " wins!" + Colors.END_COLOR
         else:
             winner_msg += '\n\t\t' + Colors.GROUP_2_TITLE + str(winner) + " wins!" + Colors.END_COLOR
@@ -247,9 +232,9 @@ class Server:
         :return: String of the winning team participants
         """
         msg = ""
-        if winner == "Group 1":
+        if winner == GROUP_NAME_1:
             for player in self.first_list:
-                r = random.randint(41, 47)
+                r = random.randint(41, 47) #Randoming color for each player
                 msg += '\t\t' + '\x1b[1;' + str(r) + ';40m' + str(player) + Colors.END_COLOR + '\n'
         else:
             for player in self.second_list:
@@ -265,7 +250,7 @@ class Server:
         :return: String formatted message
         """
         num_chars_msg = Colors.NUM_CHARS + str(number_chars) + Colors.END_COLOR
-        if group_name == "Group 1":
+        if group_name == GROUP_NAME_1:
             typed_in_msg = Colors.GROUP_1_TITLE + " typed in " + Colors.END_COLOR
             characters_msg = Colors.GROUP_1_TITLE + " characters." + Colors.END_COLOR
             group_name_msg = Colors.GROUP_1_TITLE + str(group_name) + Colors.END_COLOR

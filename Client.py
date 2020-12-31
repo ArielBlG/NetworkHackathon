@@ -4,6 +4,7 @@ import struct
 import sys
 import select
 import traceback
+from Constants import *
 
 
 class Client:
@@ -28,10 +29,9 @@ class Client:
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         print("Client started, listening for offer requests")
         print(f'My IP: {get_if_addr("eth1")}')
-        # self.client_socket.bind(("0.0.0.0", 13117))
-        self.client_socket.bind(("", 13124))
+        self.client_socket.bind(('', BROADCAST_PORT))
         while True:
-            data_rcv, addr = self.client_socket.recvfrom(1028)
+            data_rcv, addr = self.client_socket.recvfrom(MESSAGE_SIZE)
             try:
                 print(f'got from {addr}')
                 data = struct.unpack('Ibh', data_rcv)
@@ -53,8 +53,8 @@ class Client:
         self.server_socket.setblocking(False)
         while not modified_sentence:
             try:
-                sentence = self.server_socket.recv(2048)
-                modified_sentence = sentence.decode('utf-8')
+                sentence = self.server_socket.recv(MESSAGE_SIZE)
+                modified_sentence = sentence.decode(UNICODE)
                 if modified_sentence:
                     print(modified_sentence)
             except Exception as ex:
@@ -78,7 +78,6 @@ class Client:
         try:
             self.game_in_progress()
         except Exception as e:
-            # traceback.print_exception(e)
             os.system("stty -raw echo")
             traceback.print_exc()
             print("activate_client_tcp")
@@ -95,8 +94,8 @@ class Client:
         os.system("stty raw -echo")
         while not modified_message:
             try:
-                message = self.server_socket.recv(2048)
-                modified_message = message.decode("utf-8")
+                message = self.server_socket.recv(MESSAGE_SIZE)
+                modified_message = message.decode(UNICODE)
                 if modified_message:
                     break
             except Exception as ex:
@@ -125,18 +124,16 @@ class Client:
         self.client_socket.close()
 
 
-def main(name):
+def main():
     """
     Main function, Initialize client consistently
-    :param name: Client group name
-    :return:
+    :return: None
     """
     while True:
-        client = Client(name)
+        client = Client(TEAM_NAME)
         client.activate_client()
         time.sleep(3)
 
 
 if __name__ == "__main__":
-    team_name = "Wet Assh Protocol"
-    main(team_name)
+    main()
